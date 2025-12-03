@@ -79,6 +79,10 @@ export const FrameworkApp = () => {
          
          // Ensure AI Settings has defaults if missing
          parsed.aiSettings = { ...INITIAL_AI_SETTINGS, ...parsed.aiSettings };
+
+         // CRITICAL FIX: Force provider to OpenRouter to prevent Google SDK "API Key missing" error
+         // if the user has legacy data in localStorage with provider='google'.
+         parsed.aiSettings.provider = 'openrouter';
          
          if (!parsed.chats || parsed.chats.length === 0) {
             const chat = createNewChat();

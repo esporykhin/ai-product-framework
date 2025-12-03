@@ -123,12 +123,14 @@ export const SettingsModal = ({ isOpen, onClose, settings, onSave }: { isOpen: b
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
        <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl flex flex-col">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-             <h3 className="text-xl font-bold text-slate-900">⚙️ Настройки AI</h3>
+             <h3 className="text-xl font-bold text-slate-900">⚙️ Настройки AI (OpenRouter)</h3>
              <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-500"><CloseIcon /></button>
           </div>
           <div className="p-6 space-y-6">
                 <div className="space-y-4">
-                    <p className="text-sm font-medium text-slate-700">Мы используем OpenRouter для доступа к моделям (GPT-4o, Claude 3.5, Perplexity и др).</p>
+                    <p className="text-sm font-medium text-slate-700">
+                        Приложение использует OpenRouter для доступа к моделям (GPT-4o, Claude 3.5, Gemini Pro, Perplexity).
+                    </p>
                     <InputField 
                       label="OpenRouter API Key"
                       type="password"
@@ -158,7 +160,9 @@ export const SettingsModal = ({ isOpen, onClose, settings, onSave }: { isOpen: b
                         <p className="text-xs text-slate-500 mt-2">Используется для чат-бота, генерации стратегии и GTM.</p>
                     </div>
 
-                    <p className="text-xs text-slate-500">Ключ сохраняется локально в браузере.</p>
+                    <div className="bg-blue-50 text-blue-800 text-xs p-3 rounded-lg border border-blue-100">
+                        Ключ сохраняется <strong>только в вашем браузере</strong> (localStorage). Мы не имеем доступа к вашим данным.
+                    </div>
                 </div>
           </div>
           <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50 rounded-b-2xl">
