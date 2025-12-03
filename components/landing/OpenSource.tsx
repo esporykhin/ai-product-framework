@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { GithubIcon } from '../../icons';
+import { GithubIcon, CopyIcon } from '../../icons';
 
 export const OpenSource = () => {
   return (
@@ -25,7 +25,7 @@ export const OpenSource = () => {
                     <li className="flex items-start gap-3">
                         <span className="text-green-400 mt-1">✓</span>
                         <span>
-                           <strong className="text-white">BYO Keys:</strong> Вы используете свои ключи OpenRouter или Google Gemini. Вы платите только провайдеру за токены (копейки).
+                           <strong className="text-white">BYO Keys:</strong> Вы используете свой ключ OpenRouter. Вы платите только провайдеру за токены (копейки).
                         </span>
                     </li>
                     <li className="flex items-start gap-3">
@@ -45,7 +45,7 @@ export const OpenSource = () => {
              
              <div className="flex gap-4">
                 <a 
-                   href="https://github.com" 
+                   href="https://github.com/esporykhin/ai-product-framework" 
                    target="_blank" 
                    rel="noreferrer"
                    className="px-6 py-3 bg-white text-slate-900 rounded-lg font-bold hover:bg-slate-100 transition-colors flex items-center gap-2"
@@ -56,28 +56,37 @@ export const OpenSource = () => {
              </div>
           </div>
           
-          <div className="flex-1 w-full max-w-lg hidden md:block">
-             <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 shadow-2xl font-mono text-xs md:text-sm text-slate-300 overflow-hidden relative transform rotate-1 hover:rotate-0 transition-transform duration-500">
-                <div className="flex gap-2 mb-4">
-                   <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                   <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                   <div className="w-3 h-3 rounded-full bg-green-500"></div>
+          <div className="flex-1 w-full max-w-lg hidden md:block space-y-4">
+             {/* Fake Code Block: .env */}
+             <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-2xl overflow-hidden transform hover:-translate-y-1 transition-transform duration-300">
+                <div className="bg-slate-900/50 px-4 py-2 flex items-center justify-between border-b border-slate-700/50">
+                    <span className="text-xs font-mono text-slate-400">.env.example</span>
+                    <div className="flex gap-1.5">
+                       <div className="w-2.5 h-2.5 rounded-full bg-slate-600"></div>
+                       <div className="w-2.5 h-2.5 rounded-full bg-slate-600"></div>
+                    </div>
                 </div>
-                <div className="space-y-2 opacity-80">
-                   <p><span className="text-purple-400">const</span> <span className="text-blue-400">App</span> = () <span className="text-purple-400">=&gt;</span> {'{'}</p>
-                   <p className="pl-4"><span className="text-slate-500">// Your data stays local</span></p>
-                   <p className="pl-4"><span className="text-purple-400">const</span> [data, setData] = <span className="text-blue-400">useLocalStorage</span>(<span className="text-green-400">'ai_framework'</span>);</p>
-                   <p className="pl-4">&nbsp;</p>
-                   <p className="pl-4"><span className="text-purple-400">return</span> (</p>
-                   <p className="pl-8">&lt;<span className="text-red-400">PrivacyContext</span>&gt;</p>
-                   <p className="pl-12">&lt;<span className="text-yellow-400">StrategyModule</span> data={'{data}'} /&gt;</p>
-                   <p className="pl-12">&lt;<span className="text-yellow-400">ResearchAgent</span> model={'{provider}'} /&gt;</p>
-                   <p className="pl-8">&lt;/<span className="text-red-400">PrivacyContext</span>&gt;</p>
-                   <p className="pl-4">);</p>
-                   <p>{'}'};</p>
+                <div className="p-4 font-mono text-xs md:text-sm text-slate-300 overflow-x-auto">
+                    <p><span className="text-purple-400"># AI Provider Configuration</span></p>
+                    <p className="mt-2"><span className="text-blue-400">OPENROUTER_API_KEY</span>=<span className="text-green-400">sk-or-v1-xxxxxxxx...</span></p>
+                    <p className="text-slate-500 mt-2"># Optional: Self-hosted setup</p>
+                    <p><span className="text-blue-400">VITE_DEFAULT_MODEL</span>=<span className="text-green-400">"openai/gpt-4o"</span></p>
                 </div>
-                {/* Glow effect */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-primary-500/20 rounded-full blur-2xl pointer-events-none"></div>
+             </div>
+
+             {/* Fake Code Block: React */}
+             <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-2xl font-mono text-xs md:text-sm text-slate-300 overflow-hidden relative transform rotate-1 hover:rotate-0 transition-transform duration-500">
+                <div className="p-6">
+                    <div className="space-y-2 opacity-80">
+                    <p><span className="text-purple-400">const</span> [data, setData] = <span className="text-blue-400">useLocalStorage</span>(<span className="text-green-400">'ai_framework'</span>);</p>
+                    <p>&nbsp;</p>
+                    <p><span className="text-slate-500">// Your data stays local</span></p>
+                    <p><span className="text-purple-400">return</span> (</p>
+                    <p className="pl-4">&lt;<span className="text-yellow-400">StrategyModule</span> data={'{data}'} /&gt;</p>
+                    <p className="pl-4">&lt;<span className="text-yellow-400">ResearchAgent</span> provider={'{openRouter}'} /&gt;</p>
+                    <p>);</p>
+                    </div>
+                </div>
              </div>
           </div>
        </div>

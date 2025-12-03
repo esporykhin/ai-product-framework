@@ -55,30 +55,46 @@ export const AVAILABLE_MODELS: AIModel[] = [
 
     // 3. Chat / Fast (Standard LLMs)
     {
-        id: 'openai/gpt-4o',
-        name: 'GPT-4o',
+        id: 'openai/gpt-5.1',
+        name: 'GPT-5.1',
         description: 'Универсальная, быстрая и умная модель.',
-        contextWindow: 128000,
+        contextWindow: 400000,
         recommendedFor: 'chat',
         category: 'chat'
-    },
+    },    
     {
-        id: 'anthropic/claude-3.5-sonnet',
-        name: 'Claude 3.5 Sonnet',
+        id: 'google/gemini-3-pro-preview',
+        name: 'Gemini 3 PRO',
         description: 'Лучшая для написания текстов и кодинга.',
-        contextWindow: 200000,
+        contextWindow: 1000000,
+        recommendedFor: 'chat',
+        category: 'chat'
+    },    
+    {
+        id: 'deepseek/deepseek-v3.2',
+        name: 'Deepseek v3.2',
+        description: 'Лучшая для написания текстов и кодинга.',
+        contextWindow: 1000000,
         recommendedFor: 'chat',
         category: 'chat'
     },
     {
-        id: 'google/gemini-2.0-flash-001',
-        name: 'Gemini 2.0 Flash',
-        description: 'Очень быстрая и дешевая.',
+        id: 'anthropic/claude-sonnet-4.5',
+        name: 'Claude 4.5 Sonnet',
+        description: 'Лучшая для написания текстов и кодинга.',
         contextWindow: 1000000,
+        recommendedFor: 'chat',
+        category: 'chat'
+    },
+    {
+        id: 'openai/gpt-5-mini',
+        name: 'GPT-5 mini',
+        description: 'Очень быстрая и дешевая.',
+        contextWindow: 400000,
         recommendedFor: 'chat',
         category: 'chat'
     },
 ];
 
-export const DEFAULT_CHAT_MODEL = 'openai/gpt-4o';
-export const DEFAULT_RESEARCH_MODEL = 'perplexity/sonar-reasoning';
+export const DEFAULT_CHAT_MODEL = 'openai/gpt-5-mini';
+export const DEFAULT_RESEARCH_MODEL = 'openai/o4-mini-deep-research';

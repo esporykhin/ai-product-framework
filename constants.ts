@@ -1,5 +1,4 @@
 
-
 import { Step2Data, Step6Data, AISettings, FrameworkState } from './types';
 
 export const STORAGE_KEY = 'ai_framework_data_v7_clean';
@@ -14,9 +13,9 @@ export const INITIAL_STEP6: Step6Data = {
 };
 
 export const INITIAL_AI_SETTINGS: AISettings = {
-  openRouterKey: '',
+  openRouterKey: process.env.OPENROUTER_API_KEY || '',
   openRouterModel: 'openai/gpt-4o',
-  provider: 'google',
+  provider: 'openrouter',
   googleModel: 'gemini-2.5-flash',
 };
 

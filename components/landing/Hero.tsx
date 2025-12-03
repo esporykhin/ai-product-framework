@@ -29,7 +29,7 @@ export const Hero = ({ onStart }: { onStart: () => void }) => {
           
           <p className="max-w-2xl mx-auto text-xl text-slate-600 mb-10 leading-relaxed animate-fade-in animation-delay-100">
              Систематизируйте гипотезы, проводите глубокий рисерч рынка (Deep Research) и стройте стратегии с помощью AI агентов.
-             <br/><span className="text-sm text-slate-400 mt-2 block">Работает на ваших ключах OpenRouter / Google Gemini. Приватно и бесплатно.</span>
+             <br/><span className="text-sm text-slate-400 mt-2 block">Работает через OpenRouter. Приватно и бесплатно.</span>
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in animation-delay-200">
@@ -42,7 +42,7 @@ export const Hero = ({ onStart }: { onStart: () => void }) => {
              </button>
              
              <a 
-                href="https://github.com" 
+                href="https://github.com/esporykhin/ai-product-framework" 
                 target="_blank" 
                 rel="noreferrer"
                 className="px-8 py-4 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-lg hover:border-slate-400 hover:bg-slate-50 transition-all flex items-center gap-2"

@@ -15,7 +15,7 @@ export const Footer = () => {
           </div>
           <div className="flex gap-6">
              <a href="#" className="text-slate-500 hover:text-slate-900 text-sm font-medium transition-colors">Documentation</a>
-             <a href="https://github.com" target="_blank" rel="noreferrer" className="text-slate-500 hover:text-slate-900 text-sm font-medium transition-colors">GitHub</a>
+             <a href="https://github.com/esporykhin/ai-product-framework" target="_blank" rel="noreferrer" className="text-slate-500 hover:text-slate-900 text-sm font-medium transition-colors">GitHub</a>
              <a href="#" className="text-slate-500 hover:text-slate-900 text-sm font-medium transition-colors">Issues</a>
           </div>
        </div>
