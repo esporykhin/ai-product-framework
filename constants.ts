@@ -55,7 +55,8 @@ export const INITIAL_STATE: FrameworkState = {
       updatedAt: Date.now()
     }
   ],
-  activeChatId: 'default-chat'
+  activeChatId: 'default-chat',
+  selectedContext: []
 };
 
 export const AI_APPROACHES = [

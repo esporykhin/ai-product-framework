@@ -72,10 +72,17 @@ export type AISettings = {
   googleModel: string;
 };
 
+export type ContextSnippet = {
+  id: string;
+  text: string;
+  source: string; // e.g., "Strategy Doc"
+};
+
 export type ChatMessage = {
   role: 'user' | 'model';
   text: string;
   timestamp: number;
+  attachedContexts?: ContextSnippet[];
 };
 
 export type ChatSession = {
@@ -98,4 +105,6 @@ export type FrameworkState = {
 
   chats: ChatSession[];
   activeChatId: string;
+  
+  selectedContext: ContextSnippet[];
 };

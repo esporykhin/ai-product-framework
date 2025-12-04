@@ -8,7 +8,8 @@ import {
   AISettings,
   Step2Data,
   Step6Data,
-  ValidationItem
+  ValidationItem,
+  ContextSnippet
 } from './types';
 
 import { 
@@ -89,6 +90,12 @@ export const FrameworkApp = () => {
             parsed.chats = [chat];
             parsed.activeChatId = chat.id;
          }
+
+         // Migration for Context (null -> [])
+         if (!Array.isArray(parsed.selectedContext)) {
+             parsed.selectedContext = parsed.selectedContext ? [parsed.selectedContext] : [];
+         }
+
          return parsed;
       }
     } catch (e) {
@@ -276,6 +283,23 @@ export const FrameworkApp = () => {
   
   const updateAISettings = (s: AISettings) => {
     setData(prev => ({ ...prev, aiSettings: s }));
+  };
+  
+  const updateFinalStrategyText = (text: string) => {
+      setData(prev => ({ ...prev, finalStrategyText: text }));
+  };
+  
+  const addSelectedContext = (ctx: ContextSnippet) => {
+      setData(prev => ({ ...prev, selectedContext: [...(prev.selectedContext || []), ctx] }));
+      setChatOpen(true);
+  };
+
+  const removeSelectedContext = (id: string) => {
+      setData(prev => ({ ...prev, selectedContext: prev.selectedContext.filter(c => c.id !== id) }));
+  };
+
+  const clearSelectedContext = () => {
+      setData(prev => ({ ...prev, selectedContext: [] }));
   };
 
   // Export Actions
@@ -716,6 +740,8 @@ export const FrameworkApp = () => {
                 generateValidationQuestions={generateValidationQuestions}
                 updateValidationAnswer={updateValidationAnswer}
                 generateGlobalStrategy={generateGlobalStrategy}
+                updateFinalStrategyText={updateFinalStrategyText}
+                onAddContext={addSelectedContext}
                 isValidating={isValidating}
                 isGeneratingStrategy={isGeneratingStrategy}
               />
@@ -760,6 +786,9 @@ export const FrameworkApp = () => {
             data={data} 
             activeProblem={activeProblem} 
             activeChat={activeChat}
+            selectedContexts={data.selectedContext || []}
+            onRemoveContext={removeSelectedContext}
+            onClearContext={clearSelectedContext}
             makeAICall={callAI} 
             onCreateChat={handleCreateChat}
             onSelectChat={handleSelectChat}

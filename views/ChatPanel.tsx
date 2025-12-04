@@ -2,13 +2,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SparklesIcon, PlusIcon, ListIcon, CloseIcon, ChatIcon, TrashIcon, SendIcon } from '../components/icons';
 import { FormattedText } from '../components/ui';
-import { ChatMessage, ChatSession, FrameworkState, ProblemEntry } from '../types';
+import { ChatMessage, ChatSession, FrameworkState, ProblemEntry, ContextSnippet } from '../types';
 import { PROMPTS } from '../prompts';
 
 interface ChatPanelProps {
   data: FrameworkState;
   activeProblem: ProblemEntry;
   activeChat: ChatSession;
+  selectedContexts: ContextSnippet[];
+  onRemoveContext: (id: string) => void;
+  onClearContext: () => void;
   makeAICall: (system: string, user: any) => Promise<string>;
   onCreateChat: () => void;
   onSelectChat: (id: string) => void;
@@ -21,6 +24,9 @@ export const AIChatContent: React.FC<ChatPanelProps> = ({
   data, 
   activeProblem, 
   activeChat,
+  selectedContexts,
+  onRemoveContext,
+  onClearContext,
   makeAICall,
   onCreateChat,
   onSelectChat,
@@ -32,6 +38,7 @@ export const AIChatContent: React.FC<ChatPanelProps> = ({
   const [loading, setLoading] = useState(false);
   const [isHistoryView, setIsHistoryView] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -44,10 +51,21 @@ export const AIChatContent: React.FC<ChatPanelProps> = ({
   const handleSend = async () => {
     if (!input.trim()) return;
     const userMsg = input;
+    
+    // Capture snapshot of contexts before clearing
+    const currentContexts = [...selectedContexts];
+    
     setInput('');
     
-    // Optimistic Update
-    const newMessages = [...activeChat.messages, { role: 'user', text: userMsg, timestamp: Date.now() }];
+    // Optimistic Update with Contexts preserved in message
+    const newMessage: ChatMessage = { 
+        role: 'user', 
+        text: userMsg, 
+        timestamp: Date.now(),
+        attachedContexts: currentContexts.length > 0 ? currentContexts : undefined
+    };
+
+    const newMessages = [...activeChat.messages, newMessage];
     
     // Update Chat Title if it's the first real user message
     let newTitle = activeChat.title;
@@ -55,13 +73,23 @@ export const AIChatContent: React.FC<ChatPanelProps> = ({
        newTitle = userMsg.length > 30 ? userMsg.substring(0, 30) + '...' : userMsg;
     }
     
-    // TypeScript fix: role must be 'user' | 'model'
-    const updatedMessages = newMessages.map(m => ({...m, role: m.role as 'user' | 'model'}));
-
-    onUpdateMessages(activeChat.id, updatedMessages, newTitle);
+    onUpdateMessages(activeChat.id, newMessages, newTitle);
     setLoading(true);
 
+    // Clear UI selection immediately for better UX
+    if (currentContexts.length > 0) onClearContext();
+
     try {
+      // Build Prompt with Multiple Contexts
+      let contextInjection = "";
+      if (currentContexts.length > 0) {
+          contextInjection += "\n\n=== USER ATTACHED CONTEXTS ===\n";
+          currentContexts.forEach((ctx, index) => {
+              contextInjection += `\n--- Context #${index + 1} from ${ctx.source} ---\n"${ctx.text}"\n`;
+          });
+          contextInjection += "\n(User wants to discuss these specific texts)\n==============================\n";
+      }
+
       // Use centralized prompt
       const systemInstruction = PROMPTS.CHAT_SYSTEM(
          data.activeView === 'strategy' ? 'Strategy Dashboard' : 'Problem Editor',
@@ -70,18 +98,32 @@ export const AIChatContent: React.FC<ChatPanelProps> = ({
          JSON.stringify(activeProblem, null, 2)
       );
       
-      const history = updatedMessages.map((m: any) => ({ role: m.role, text: m.text }));
+      const history = newMessages.map((m: any) => ({ role: m.role, text: m.text }));
+      
+      // Inject context into the last user message for the AI call only (hidden from UI text)
+      if (contextInjection) {
+          const lastMsg = history[history.length - 1];
+          lastMsg.text += contextInjection;
+      }
       
       const text = await makeAICall(systemInstruction, history);
 
       const responseMessage: ChatMessage = { role: 'model', text: text || '...', timestamp: Date.now() };
-      onUpdateMessages(activeChat.id, [...updatedMessages, responseMessage]);
+      onUpdateMessages(activeChat.id, [...newMessages, responseMessage]);
+
     } catch (error: any) {
       const errorMessage: ChatMessage = { role: 'model', text: `Ошибка: ${error.message}`, timestamp: Date.now() };
-      onUpdateMessages(activeChat.id, [...updatedMessages, errorMessage]);
+      onUpdateMessages(activeChat.id, [...newMessages, errorMessage]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          handleSend();
+      }
   };
 
   return (
@@ -178,6 +220,21 @@ export const AIChatContent: React.FC<ChatPanelProps> = ({
                         : 'bg-indigo-50/80 text-slate-800 border-indigo-100 rounded-tl-sm'
                     }
                  `}>
+                    {/* Render Attached Contexts in History */}
+                    {msg.attachedContexts && msg.attachedContexts.length > 0 && (
+                        <div className="mb-3 space-y-2">
+                            {msg.attachedContexts.map((ctx) => (
+                                <div key={ctx.id} className="text-xs bg-purple-50/50 border-l-2 border-purple-400 p-2 rounded-r flex flex-col gap-1">
+                                     <span className="font-bold text-[10px] text-purple-600 uppercase tracking-wide flex items-center gap-1">
+                                        <ChatIcon /> {ctx.source}
+                                     </span>
+                                     <span className="text-slate-600 italic line-clamp-4">"{ctx.text}"</span>
+                                </div>
+                            ))}
+                            <div className="h-px bg-slate-100 w-full my-2"></div>
+                        </div>
+                    )}
+                    
                     <FormattedText text={msg.text} />
                  </div>
               </div>
@@ -199,20 +256,50 @@ export const AIChatContent: React.FC<ChatPanelProps> = ({
       {/* Input Area */}
       {!isHistoryView && (
           <div className="p-4 bg-white border-t border-slate-200">
+            {/* Visual Context Indicator */}
+            {selectedContexts.length > 0 && (
+                <div className="mb-3 flex flex-col gap-2 max-h-32 overflow-y-auto">
+                    {selectedContexts.map((ctx) => (
+                        <div key={ctx.id} className="p-3 bg-purple-50 border border-purple-100 rounded-lg flex items-start justify-between animate-fade-in shadow-sm">
+                            <div className="flex items-start gap-2 overflow-hidden">
+                                <div className="mt-1 text-purple-600"><ChatIcon /></div>
+                                <div className="min-w-0">
+                                    <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Прикреплен контекст ({ctx.source})</p>
+                                    <p className="text-xs text-slate-700 truncate italic">"{ctx.text.substring(0, 60)}..."</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => onRemoveContext(ctx.id)} 
+                                className="p-1 hover:bg-purple-100 rounded text-purple-400 hover:text-purple-700 transition-colors"
+                            >
+                                <CloseIcon />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             <div className="relative">
-              <input
-                type="text"
+              <textarea
+                ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder={loading ? "Подождите..." : "Спросите что-нибудь..."}
+                onKeyDown={handleKeyDown}
+                placeholder={loading ? "Подождите..." : selectedContexts.length > 0 ? "Задайте вопрос по выделенному тексту..." : "Спросите что-нибудь... (Shift+Enter для переноса)"}
                 disabled={loading}
-                className="w-full pl-4 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all shadow-inner text-sm md:text-base"
+                rows={1}
+                className="w-full pl-4 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all shadow-inner text-sm md:text-base resize-none min-h-[48px] max-h-[150px]"
+                style={{ height: 'auto', minHeight: '48px' }}
+                onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = 'auto';
+                    target.style.height = `${Math.min(target.scrollHeight, 150)}px`;
+                }}
               />
               <button 
                 onClick={handleSend}
                 disabled={!input.trim() || loading}
-                className="absolute right-2 top-2 p-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:hover:bg-primary-600 transition-all shadow-md"
+                className="absolute right-2 bottom-2 p-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:hover:bg-primary-600 transition-all shadow-md mb-1"
               >
                 <SendIcon />
               </button>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 // --- Shared UI Components ---
@@ -101,7 +100,7 @@ const parseInline = (text: string) => {
   });
 };
 
-const TableRenderer = ({ rows }: { rows: string[] }) => {
+const TableRenderer: React.FC<{ rows: string[] }> = ({ rows }) => {
     if (rows.length < 2) return null;
     
     // Parse header
@@ -151,7 +150,7 @@ export const FormattedText = ({ text }: { text: string }) => {
 
       // Table detection
       if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
-          const tableRows = [];
+          const tableRows: string[] = [];
           while (i < lines.length && lines[i].trim().startsWith('|')) {
               tableRows.push(lines[i]);
               i++;
