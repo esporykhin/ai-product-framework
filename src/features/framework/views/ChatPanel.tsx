@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { SparklesIcon, PlusIcon, ListIcon, CloseIcon, ChatIcon, TrashIcon, SendIcon } from '@shared/ui/icons';
+import { SparklesIcon, PlusIcon, ListIcon, CloseIcon, ChatIcon, TrashIcon, SendIcon, ExpandIcon, ShrinkIcon, PaperclipIcon, ImageIcon } from '@shared/ui/icons';
 import { FormattedText } from '@shared/ui/FormattedText';
-import { ChatMessage, ChatSession, FrameworkState, ProblemEntry, ContextSnippet } from '@shared/types';
+import { ChatMessage, ChatSession, FrameworkState, ProblemEntry, ContextSnippet, AttachedFile } from '@shared/types';
 import { PROMPTS } from '@shared/lib/prompts';
 
 interface ChatPanelProps {
@@ -18,6 +18,12 @@ interface ChatPanelProps {
   onDeleteChat: (id: string) => void;
   onUpdateMessages: (id: string, msgs: ChatMessage[], title?: string) => void;
   onCloseMobile: () => void;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
+  input?: string;
+  onInputChange?: (value: string) => void;
+  attachedFiles?: AttachedFile[];
+  onAttachedFilesChange?: (files: AttachedFile[]) => void;
 }
 
 export const AIChatContent: React.FC<ChatPanelProps> = ({ 
@@ -32,13 +38,27 @@ export const AIChatContent: React.FC<ChatPanelProps> = ({
   onSelectChat,
   onDeleteChat,
   onUpdateMessages,
-  onCloseMobile
+  onCloseMobile,
+  isExpanded = false,
+  onToggleExpand,
+  input: externalInput,
+  onInputChange: externalOnInputChange,
+  attachedFiles: externalAttachedFiles,
+  onAttachedFilesChange: externalOnAttachedFilesChange
 }) => {
-  const [input, setInput] = useState('');
+  const [internalInput, setInternalInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isHistoryView, setIsHistoryView] = useState(false);
+  const [internalAttachedFiles, setInternalAttachedFiles] = useState<AttachedFile[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Use external state if provided, otherwise use internal
+  const input = externalInput !== undefined ? externalInput : internalInput;
+  const setInput = externalOnInputChange || setInternalInput;
+  const attachedFiles = externalAttachedFiles !== undefined ? externalAttachedFiles : internalAttachedFiles;
+  const setAttachedFiles = externalOnAttachedFilesChange || setInternalAttachedFiles;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -48,21 +68,90 @@ export const AIChatContent: React.FC<ChatPanelProps> = ({
     if (!isHistoryView) scrollToBottom();
   }, [activeChat.messages, loading, isHistoryView]);
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newFiles: AttachedFile[] = [];
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      // Only accept images
+      if (!file.type.startsWith('image/')) {
+        alert(`Файл ${file.name} не является изображением`);
+        continue;
+      }
+
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`Файл ${file.name} слишком большой (макс. 10MB)`);
+        continue;
+      }
+
+      try {
+        const base64 = await fileToBase64(file);
+        newFiles.push({
+          id: `file-${Date.now()}-${i}`,
+          name: file.name,
+          type: file.type,
+          base64: base64,
+          size: file.size
+        });
+      } catch (error) {
+        console.error('Error reading file:', error);
+        alert(`Ошибка чтения файла ${file.name}`);
+      }
+    }
+
+    if (typeof setAttachedFiles === 'function') {
+      const currentFiles = Array.isArray(attachedFiles) ? attachedFiles : [];
+      setAttachedFiles([...currentFiles, ...newFiles]);
+    }
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeFile = (id: string) => {
+    if (typeof setAttachedFiles === 'function') {
+      const currentFiles = Array.isArray(attachedFiles) ? attachedFiles : [];
+      setAttachedFiles(currentFiles.filter((f: AttachedFile) => f.id !== id));
+    }
+  };
+
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() && attachedFiles.length === 0) return;
     const userMsg = input;
     
-    // Capture snapshot of contexts before clearing
+    // Capture snapshot of contexts and files before clearing
     const currentContexts = [...selectedContexts];
+    const currentFiles = [...attachedFiles];
     
     setInput('');
+    setAttachedFiles([]);
     
-    // Optimistic Update with Contexts preserved in message
+    // Optimistic Update with Contexts and Files preserved in message
     const newMessage: ChatMessage = { 
         role: 'user', 
         text: userMsg, 
         timestamp: Date.now(),
-        attachedContexts: currentContexts.length > 0 ? currentContexts : undefined
+        attachedContexts: currentContexts.length > 0 ? currentContexts : undefined,
+        attachedFiles: currentFiles.length > 0 ? currentFiles : undefined
     };
 
     const newMessages = [...activeChat.messages, newMessage];
@@ -98,7 +187,11 @@ export const AIChatContent: React.FC<ChatPanelProps> = ({
          JSON.stringify(activeProblem, null, 2)
       );
       
-      const history = newMessages.map((m: any) => ({ role: m.role, text: m.text }));
+      const history = newMessages.map((m: any) => ({ 
+        role: m.role, 
+        text: m.text,
+        files: m.attachedFiles 
+      }));
       
       // Inject context into the last user message for the AI call only (hidden from UI text)
       if (contextInjection) {
@@ -151,6 +244,15 @@ export const AIChatContent: React.FC<ChatPanelProps> = ({
              </button>
            ) : (
              <>
+                {onToggleExpand && (
+                  <button 
+                    onClick={onToggleExpand} 
+                    className="p-2 hover:bg-slate-100 text-slate-500 hover:text-primary-600 rounded-lg transition-colors" 
+                    title={isExpanded ? "Свернуть" : "Развернуть на весь экран"}
+                  >
+                    {isExpanded ? <ShrinkIcon /> : <ExpandIcon />}
+                  </button>
+                )}
                 <button onClick={() => onCreateChat()} className="p-2 hover:bg-slate-100 text-slate-500 hover:text-primary-600 rounded-lg transition-colors" title="Новый чат">
                   <PlusIcon />
                 </button>
@@ -220,6 +322,26 @@ export const AIChatContent: React.FC<ChatPanelProps> = ({
                         : 'bg-indigo-50/80 text-slate-800 border-indigo-100 rounded-tl-sm'
                     }
                  `}>
+                    {/* Render Attached Files in History */}
+                    {msg.attachedFiles && msg.attachedFiles.length > 0 && (
+                        <div className="mb-3 space-y-2">
+                            {msg.attachedFiles.map((file) => (
+                                <div key={file.id} className="relative group">
+                                    <img 
+                                      src={file.base64} 
+                                      alt={file.name} 
+                                      className="max-w-full max-h-64 rounded-lg border border-slate-200"
+                                    />
+                                    <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                                      <ImageIcon />
+                                      {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                                    </div>
+                                </div>
+                            ))}
+                            <div className="h-px bg-slate-100 w-full my-2"></div>
+                        </div>
+                    )}
+                    
                     {/* Render Attached Contexts in History */}
                     {msg.attachedContexts && msg.attachedContexts.length > 0 && (
                         <div className="mb-3 space-y-2">
@@ -279,35 +401,83 @@ export const AIChatContent: React.FC<ChatPanelProps> = ({
                 </div>
             )}
 
-            <div className="relative">
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={loading ? "Подождите..." : selectedContexts.length > 0 ? "Задайте вопрос по выделенному тексту..." : "Спросите что-нибудь... (Shift+Enter для переноса)"}
-                disabled={loading}
-                rows={1}
-                className="w-full pl-4 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all shadow-inner text-sm md:text-base resize-none min-h-[48px] max-h-[150px]"
-                style={{ height: 'auto', minHeight: '48px' }}
-                onInput={(e) => {
-                    const target = e.target as HTMLTextAreaElement;
-                    target.style.height = 'auto';
-                    target.style.height = `${Math.min(target.scrollHeight, 150)}px`;
-                }}
+            {/* Attached Files Preview */}
+            {attachedFiles.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+                    {attachedFiles.map((file) => (
+                        <div key={file.id} className="relative group animate-fade-in">
+                            <img 
+                              src={file.base64} 
+                              alt={file.name} 
+                              className="h-24 w-24 object-cover rounded-lg border-2 border-slate-200"
+                            />
+                            <button 
+                                onClick={() => removeFile(file.id)} 
+                                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                            >
+                                <CloseIcon />
+                            </button>
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] px-1 py-0.5 rounded-b-lg truncate">
+                                {file.name}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <div className="relative flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
               />
               <button 
-                onClick={handleSend}
-                disabled={!input.trim() || loading}
-                className="absolute right-2 bottom-2 p-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:hover:bg-primary-600 transition-all shadow-md mb-1"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
+                className="p-3 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-50 transition-all"
+                title="Прикрепить изображение"
               >
-                <SendIcon />
+                <PaperclipIcon />
               </button>
+              
+              <div className="relative flex-1">
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={loading ? "Подождите..." : attachedFiles.length > 0 ? "Опишите изображение или задайте вопрос..." : selectedContexts.length > 0 ? "Задайте вопрос по выделенному тексту..." : "Спросите что-нибудь... (Shift+Enter для переноса)"}
+                  disabled={loading}
+                  rows={1}
+                  className="w-full pl-4 pr-12 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all shadow-inner text-sm md:text-base resize-none min-h-[48px] max-h-[150px]"
+                  style={{ height: 'auto', minHeight: '48px' }}
+                  onInput={(e) => {
+                      const target = e.target as HTMLTextAreaElement;
+                      target.style.height = 'auto';
+                      target.style.height = `${Math.min(target.scrollHeight, 150)}px`;
+                  }}
+                />
+                <button 
+                  onClick={handleSend}
+                  disabled={(!input.trim() && attachedFiles.length === 0) || loading}
+                  className="absolute right-2 bottom-2 p-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:hover:bg-primary-600 transition-all shadow-md mb-1"
+                >
+                  <SendIcon />
+                </button>
+              </div>
             </div>
             <div className="text-center mt-2">
                 <p className="text-[10px] text-slate-400">
-                    ИИ имеет доступ к вашим гипотезам и контексту проекта.
+                    ИИ имеет доступ к вашим гипотезам и контексту проекта. Поддерживаются изображения до 10MB.
                 </p>
+                {attachedFiles.length > 0 && (
+                  <p className="text-[10px] text-amber-600 mt-1">
+                    ⚠️ Изображения не сохраняются между сессиями
+                  </p>
+                )}
             </div>
           </div>
       )}

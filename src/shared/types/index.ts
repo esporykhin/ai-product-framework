@@ -66,11 +66,20 @@ export type ContextSnippet = {
   source: string;
 };
 
+export type AttachedFile = {
+  id: string;
+  name: string;
+  type: string;
+  base64: string;
+  size: number;
+};
+
 export type ChatMessage = {
   role: 'user' | 'model';
   text: string;
   timestamp: number;
   attachedContexts?: ContextSnippet[];
+  attachedFiles?: AttachedFile[];
 };
 
 export type ChatSession = {

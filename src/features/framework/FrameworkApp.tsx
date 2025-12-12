@@ -51,6 +51,10 @@ import { ProblemView } from './views/ProblemView';
 import { AIChatContent } from './views/ChatPanel';
 
 export const FrameworkApp = () => {
+  const [chatExpanded, setChatExpanded] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [chatAttachedFiles, setChatAttachedFiles] = useState<any[]>([]);
+  
   const [data, setData] = useState<FrameworkState>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -147,9 +151,45 @@ export const FrameworkApp = () => {
   const [isValidating, setIsValidating] = useState(false);
   const [isResearching, setIsResearching] = useState(false);
 
-  // Persistence Effect
+  // Persistence Effect with error handling and file cleanup
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    try {
+      // Clone data and remove base64 files to prevent quota exceeded
+      const dataToSave = {
+        ...data,
+        chats: data.chats.map(chat => ({
+          ...chat,
+          messages: chat.messages.map(msg => ({
+            ...msg,
+            // Remove attachedFiles from storage (too large)
+            attachedFiles: undefined
+          }))
+        }))
+      };
+      
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+    } catch (e: any) {
+      console.error("Failed to save to localStorage:", e);
+      // If quota exceeded, try to save without chat history
+      if (e.name === 'QuotaExceededError') {
+        try {
+          const minimalData = {
+            ...data,
+            chats: [data.chats.find(c => c.id === data.activeChatId) || data.chats[0]].map(chat => ({
+              ...chat,
+              messages: chat.messages.slice(-10).map(msg => ({
+                ...msg,
+                attachedFiles: undefined,
+                attachedContexts: undefined
+              }))
+            }))
+          };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(minimalData));
+        } catch (e2) {
+          console.error("Failed to save minimal data:", e2);
+        }
+      }
+    }
   }, [data]);
 
   const resetData = () => {
@@ -769,36 +809,77 @@ export const FrameworkApp = () => {
 
       {/* AI Chat Panel */}
       <>
-        {chatOpen && (
+        {(chatOpen || chatExpanded) && (
           <div 
             className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 xl:hidden"
-            onClick={() => setChatOpen(false)}
+            onClick={() => {
+              setChatOpen(false);
+              setChatExpanded(false);
+            }}
           ></div>
         )}
 
-        <aside className={`
-          fixed inset-y-0 right-0 z-50 w-full sm:w-[400px] bg-white border-l border-slate-200 shadow-2xl xl:shadow-none
-          transform transition-transform duration-300 ease-in-out
-          xl:transform-none xl:static xl:w-[400px] xl:h-screen xl:sticky xl:top-0 xl:flex xl:flex-col
-          ${chatOpen ? 'translate-x-0' : 'translate-x-full xl:translate-x-0'}
-        `}>
-          <AIChatContent 
-            data={data} 
-            activeProblem={activeProblem} 
-            activeChat={activeChat}
-            selectedContexts={data.selectedContext || []}
-            onRemoveContext={removeSelectedContext}
-            onClearContext={clearSelectedContext}
-            makeAICall={callAI} 
-            onCreateChat={handleCreateChat}
-            onSelectChat={handleSelectChat}
-            onDeleteChat={handleDeleteChat}
-            onUpdateMessages={handleUpdateMessages}
-            onCloseMobile={() => setChatOpen(false)}
-          />
-        </aside>
+        {/* Expanded Chat Overlay */}
+        {chatExpanded && (
+          <div className="fixed inset-0 z-50 bg-white flex flex-col">
+            <AIChatContent 
+              data={data} 
+              activeProblem={activeProblem} 
+              activeChat={activeChat}
+              selectedContexts={data.selectedContext || []}
+              onRemoveContext={removeSelectedContext}
+              onClearContext={clearSelectedContext}
+              makeAICall={callAI} 
+              onCreateChat={handleCreateChat}
+              onSelectChat={handleSelectChat}
+              onDeleteChat={handleDeleteChat}
+              onUpdateMessages={handleUpdateMessages}
+              onCloseMobile={() => {
+                setChatOpen(false);
+                setChatExpanded(false);
+              }}
+              isExpanded={true}
+              onToggleExpand={() => setChatExpanded(false)}
+              input={chatInput}
+              onInputChange={setChatInput}
+              attachedFiles={chatAttachedFiles}
+              onAttachedFilesChange={setChatAttachedFiles}
+            />
+          </div>
+        )}
 
-        {!chatOpen && (
+        {/* Normal Chat Panel */}
+        {!chatExpanded && (
+          <aside className={`
+            fixed inset-y-0 right-0 z-50 w-full sm:w-[400px] bg-white border-l border-slate-200 shadow-2xl xl:shadow-none
+            transform transition-transform duration-300 ease-in-out
+            xl:transform-none xl:static xl:w-[400px] xl:h-screen xl:sticky xl:top-0 xl:flex xl:flex-col
+            ${chatOpen ? 'translate-x-0' : 'translate-x-full xl:translate-x-0'}
+          `}>
+            <AIChatContent 
+              data={data} 
+              activeProblem={activeProblem} 
+              activeChat={activeChat}
+              selectedContexts={data.selectedContext || []}
+              onRemoveContext={removeSelectedContext}
+              onClearContext={clearSelectedContext}
+              makeAICall={callAI} 
+              onCreateChat={handleCreateChat}
+              onSelectChat={handleSelectChat}
+              onDeleteChat={handleDeleteChat}
+              onUpdateMessages={handleUpdateMessages}
+              onCloseMobile={() => setChatOpen(false)}
+              isExpanded={false}
+              onToggleExpand={() => setChatExpanded(true)}
+              input={chatInput}
+              onInputChange={setChatInput}
+              attachedFiles={chatAttachedFiles}
+              onAttachedFilesChange={setChatAttachedFiles}
+            />
+          </aside>
+        )}
+
+        {!chatOpen && !chatExpanded && (
           <button 
             onClick={() => setChatOpen(true)}
             className="fixed bottom-6 right-6 z-50 xl:hidden w-14 h-14 bg-primary-600 text-white rounded-full shadow-xl shadow-primary-600/40 flex items-center justify-center hover:scale-105 transition-transform active:scale-95"

@@ -1,9 +1,21 @@
-import { AISettings, Source } from '../types';
+import { AISettings, Source, AttachedFile } from '../types';
+
+type MessageContent = string | Array<{
+  type: 'text' | 'image_url';
+  text?: string;
+  image_url?: { url: string };
+}>;
+
+type MessageInput = string | { 
+  role: 'user' | 'model'; 
+  text: string;
+  files?: AttachedFile[];
+};
 
 export const makeAICall = async (
     settings: AISettings,
     systemPrompt: string, 
-    userPrompt: string | { role: 'user' | 'model', text: string }[]
+    userPrompt: MessageInput | MessageInput[]
   ): Promise<string> => {
     
     const { openRouterKey, openRouterModel } = settings;
@@ -12,11 +24,42 @@ export const makeAICall = async (
         throw new Error("API Key не установлен. Нажмите на иконку настроек (шестеренка) и введите ключ OpenRouter.");
     }
 
+    const buildMessageContent = (msg: MessageInput): MessageContent => {
+      if (typeof msg === 'string') return msg;
+      
+      const files = msg.files || [];
+      if (files.length === 0) return msg.text;
+      
+      // Multimodal content with images
+      const content: Array<{ type: 'text' | 'image_url'; text?: string; image_url?: { url: string } }> = [
+        { type: 'text', text: msg.text }
+      ];
+      
+      files.forEach(file => {
+        if (file.type.startsWith('image/')) {
+          content.push({
+            type: 'image_url',
+            image_url: { url: file.base64 }
+          });
+        }
+      });
+      
+      return content;
+    };
+
     const messages = [
       { role: 'system', content: systemPrompt },
       ...(Array.isArray(userPrompt) 
-        ? userPrompt.map(m => ({ role: m.role === 'model' ? 'assistant' : 'user', content: m.text }))
-        : [{ role: 'user', content: userPrompt }])
+        ? userPrompt.map(m => {
+            if (typeof m === 'string') {
+              return { role: 'user', content: m };
+            }
+            return { 
+              role: m.role === 'model' ? 'assistant' : 'user', 
+              content: buildMessageContent(m)
+            };
+          })
+        : [{ role: 'user', content: buildMessageContent(userPrompt) }])
     ];
 
     try {
