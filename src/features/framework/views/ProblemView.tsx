@@ -312,27 +312,69 @@ export const ProblemView: React.FC<ProblemViewProps> = ({
 
             {/* Step 6 */}
             <section className="scroll-mt-24" id="step6">
-            <SectionHeader step="Шаг 6" title="Этика" subtitle="Риски для этой гипотезы." />
-            <div className="bg-slate-900 rounded-3xl p-8 md:p-12 text-slate-100">
+            <SectionHeader step="Шаг 6" title="Риски и Ограничения" subtitle="Что может пойти не так и как это предотвратить?" />
+            <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 md:p-12 text-slate-100 shadow-2xl">
+                <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+                    <p className="text-sm text-amber-200">
+                        <strong>💡 Зачем это нужно:</strong> Честная оценка рисков помогает избежать провала на старте. 
+                        Опиши конкретные проблемы, которые могут возникнуть, и как ты планируешь их решать.
+                    </p>
+                </div>
+                
                 <div className="grid md:grid-cols-2 gap-6">
                 {[
-                    { id: 'fairness', label: 'Справедливость', ph: 'Смещение в данных?' },
-                    { id: 'transparency', label: 'Прозрачность', ph: 'Понятно ли решение?' },
-                    { id: 'privacy', label: 'Приватность', ph: 'Защита данных?' },
-                    { id: 'safety', label: 'Безопасность', ph: 'Защита от атак?' },
-                    { id: 'humanOversight', label: 'Контроль', ph: 'Человек в цикле?' },
+                    { 
+                        id: 'fairness', 
+                        label: '⚖️ Справедливость и Bias', 
+                        ph: 'Пример: "Модель может хуже работать для пользователей из регионов с малым количеством данных. Решение: сбалансировать датасет."',
+                        hint: 'Может ли ИИ дискриминировать определенные группы пользователей?'
+                    },
+                    { 
+                        id: 'transparency', 
+                        label: '🔍 Прозрачность решений', 
+                        ph: 'Пример: "Пользователь не поймет, почему ИИ отклонил заявку. Решение: добавить объяснения в UI."',
+                        hint: 'Сможет ли пользователь понять, почему ИИ принял такое решение?'
+                    },
+                    { 
+                        id: 'privacy', 
+                        label: '🔒 Приватность данных', 
+                        ph: 'Пример: "Обрабатываем персональные данные. Решение: шифрование + согласие GDPR."',
+                        hint: 'Какие данные собираем? Как защищаем? Есть ли риски утечки?'
+                    },
+                    { 
+                        id: 'safety', 
+                        label: '🛡️ Безопасность и Атаки', 
+                        ph: 'Пример: "Чат-бот может выдать токсичный контент. Решение: модерация + фильтры."',
+                        hint: 'Может ли ИИ быть взломан или выдать вредный результат?'
+                    },
                 ].map((field) => (
-                    <div key={field.id} className={field.id === 'humanOversight' ? 'md:col-span-2' : ''}>
-                        <label className="block text-sm font-bold text-primary-300 mb-2">{field.label}</label>
+                    <div key={field.id} className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
+                        <label className="block text-base font-bold text-primary-300 mb-1">{field.label}</label>
+                        <p className="text-xs text-slate-400 mb-3">{field.hint}</p>
                         <textarea
                         value={(activeProblem.step6 as any)[field.id]}
                         onChange={(e) => updateActiveStep6(field.id as keyof Step6Data, e.target.value)}
                         placeholder={field.ph}
-                        rows={2}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-slate-100 text-sm focus:ring-1 focus:ring-primary-500 outline-none"
+                        rows={3}
+                        className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-slate-100 text-sm placeholder-slate-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
                         />
                     </div>
                 ))}
+                </div>
+
+                {/* Human Oversight - Full Width */}
+                <div className="mt-6 bg-slate-800/50 rounded-xl p-5 border border-slate-700/50">
+                    <label className="block text-base font-bold text-primary-300 mb-1">👤 Контроль человека (Human-in-the-Loop)</label>
+                    <p className="text-xs text-slate-400 mb-3">
+                        Где в процессе должен быть человек? Какие решения ИИ не может принимать самостоятельно?
+                    </p>
+                    <textarea
+                    value={activeProblem.step6.humanOversight}
+                    onChange={(e) => updateActiveStep6('humanOversight', e.target.value)}
+                    placeholder='Пример: "Финальное решение по кредиту принимает менеджер. ИИ только рекомендует. Критичные случаи эскалируются."'
+                    rows={3}
+                    className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-slate-100 text-sm placeholder-slate-500 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+                    />
                 </div>
             </div>
             </section>
